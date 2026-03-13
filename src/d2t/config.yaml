@@ -1,0 +1,13 @@
+# src/d2t/config.yaml
+recipes:
+  monthly_revenue:
+    description: "Monthly revenue breakdown by group"
+    strategy: sum_by_group
+    template: monthly_report
+    inputs:
+      - name: main
+        description: "Data with a grouping column and a numeric value column"
+        required: true
+    params:
+      group_col: region
+      value_col: revenue

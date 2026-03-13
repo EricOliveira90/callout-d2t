@@ -1,0 +1,16 @@
+{# src/d2t/templates/monthly_report.j2 #}
+{% from '_macros/formatting.j2' import hr, heading %}
+
+{{ heading("Monthly Report") }}
+
+Total: {{ total | as_currency }}
+Groups: {{ count }}
+
+{{ hr() }}
+
+{% for g in groups %}
+{{ "%-20s" | format(g.name) }}  {{ g.value | as_currency }}  ({{ g.pct | as_pct }})
+{% endfor %}
+
+{{ hr() }}
+Generated: {{ now | dateformat }}

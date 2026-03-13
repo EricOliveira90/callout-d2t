@@ -1,0 +1,10 @@
+{# src/d2t/templates/_macros/formatting.j2 #}
+
+{% macro heading(text, char="=") -%}
+{{ text }}
+{{ char * text|length }}
+{%- endmacro %}
+
+{% macro hr(char="-", width=60) -%}
+{{ char * width }}
+{%- endmacro %}
