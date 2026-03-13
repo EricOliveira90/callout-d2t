@@ -1,0 +1,25 @@
+# tests/fixtures/config.yaml
+recipes:
+  test_echo:
+    description: "Test recipe using echo strategy"
+    strategy: echo
+    template: simple
+    inputs:
+      - name: main
+        description: "Primary data"
+        required: true
+    params:
+      prefix: "test"
+
+  multi_input:
+    description: "Recipe with multiple inputs"
+    strategy: echo
+    template: simple
+    inputs:
+      - name: main
+        description: "Primary data"
+        required: true
+      - name: baseline
+        description: "Baseline for comparison"
+        required: false
+    params: {}
