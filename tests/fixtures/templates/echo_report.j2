@@ -1,0 +1,5 @@
+{# tests/fixtures/templates/echo_report.j2 #}
+Count: {{ count }}
+{% for row in rows %}
+- {{ row.region }}: {{ row.revenue }}
+{% endfor %}
