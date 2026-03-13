@@ -197,7 +197,7 @@ def recipes(as_json):
                 for inp in item.get("inputs", [])
             )
             click.echo(
-                f"  {item['name']:<20s} [{item['strategy']}] → [{item['template']}]"
+                f"  {item['name']:<20s} [{item['strategy']}] -> [{item['template']}]"
                 f"  inputs: {inputs_str or '(none)'}"
             )
             if desc:
