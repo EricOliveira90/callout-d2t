@@ -56,7 +56,11 @@ def _find_strategy_class(module) -> type[AnalysisStrategy] | None:
 
 
 def _load_from_file(name: str, directory: Path):
-    """Load a strategy module from a .py file using spec_from_file_location."""
+    """Load a strategy module from a .py file using spec_from_file_location.
+
+    WARNING: This executes arbitrary Python code from the given directory.
+    Only load strategies from directories you trust.
+    """
     file_path = directory / f"{name}.py"
     if not file_path.exists():
         return None

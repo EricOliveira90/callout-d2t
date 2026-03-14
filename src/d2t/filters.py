@@ -16,6 +16,7 @@ def as_currency(value: float, symbol: str = "$") -> str:
 
 def as_pct(value: float, decimals: int = 1) -> str:
     """Format a number as a percentage."""
+    decimals = max(0, min(int(decimals), 10))  # clamp to sane range
     return f"{value:.{decimals}f}%"
 
 

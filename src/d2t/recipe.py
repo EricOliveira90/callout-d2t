@@ -44,12 +44,19 @@ def load_recipe(name: str, config_path: Path | None = None) -> dict:
         raise UnknownRecipeError(name, available=available)
 
     recipe = recipes[name]
+
+    params = recipe.get("params", {})
+    if not isinstance(params, dict):
+        raise RecipeConfigError(
+            f"Recipe '{name}': 'params' must be a mapping, got {type(params).__name__}"
+        )
+
     return {
         "description": recipe.get("description", ""),
         "strategy": recipe["strategy"],
         "template": recipe["template"],
         "inputs": recipe.get("inputs", []),
-        "params": recipe.get("params", {}),
+        "params": params,
     }
 
 

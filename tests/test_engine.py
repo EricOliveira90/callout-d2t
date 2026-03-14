@@ -29,6 +29,8 @@ class TestBuildEnvironment:
     def test_registers_now_global(self):
         env = build_environment(template_dirs=[FIXTURES / "templates"])
         assert "now" in env.globals
+        import datetime
+        assert isinstance(env.globals["now"], datetime.datetime)
 
     def test_uses_strict_undefined(self):
         env = build_environment(template_dirs=[FIXTURES / "templates"])

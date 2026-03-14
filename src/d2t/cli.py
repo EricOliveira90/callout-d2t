@@ -62,7 +62,11 @@ def run(ctx, recipe, strategy, template, inputs, params, strategy_dirs, template
 
         # Merge CLI params (override recipe defaults)
         for p in params:
-            key, _, value = p.partition("=")
+            key, sep, value = p.partition("=")
+            if not sep or not key:
+                raise click.UsageError(
+                    f"Invalid --param format: '{p}'. Expected key=value."
+                )
             strategy_params[key] = value
 
         # Parse inputs

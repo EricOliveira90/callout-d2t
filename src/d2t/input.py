@@ -10,12 +10,20 @@ from d2t.errors import InputNotFoundError, InputParseError
 
 
 def _coerce_value(value: str):
-    """Try to coerce a string to int, then float, else return as-is."""
+    """Try to coerce a string to int, then float, else return as-is.
+
+    Strings with leading zeros (e.g., zip codes like '07302') are preserved
+    as strings to avoid silent data loss.
+    """
+    stripped = value.strip()
+    # Don't coerce strings with leading zeros (e.g., zip codes, IDs)
+    if len(stripped) > 1 and stripped.startswith("0") and not stripped.startswith("0."):
+        return stripped
     try:
-        return int(value)
+        return int(stripped)
     except (ValueError, TypeError):
         try:
-            return float(value)
+            return float(stripped)
         except (ValueError, TypeError):
             return value
 

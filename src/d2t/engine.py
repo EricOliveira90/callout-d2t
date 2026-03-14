@@ -9,6 +9,7 @@ from jinja2 import (
     FileSystemLoader,
     StrictUndefined,
     TemplateNotFound,
+    TemplateRuntimeError,
     TemplateSyntaxError,
     UndefinedError,
 )
@@ -81,5 +82,12 @@ def render(
 
     try:
         return template.render(**context)
-    except (UndefinedError, TemplateSyntaxError, TypeError, ValueError) as e:
+    except (
+        UndefinedError,
+        TemplateSyntaxError,
+        TemplateRuntimeError,
+        TypeError,
+        ValueError,
+        AttributeError,
+    ) as e:
         raise TemplateRenderError(str(e)) from e
