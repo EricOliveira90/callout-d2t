@@ -1,0 +1,23 @@
+# CSV data files
+*.csv
+
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+
+# Distribution / packaging
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+.env
+.venv/
+venv/
+
+# AI workspace metadata
+.claude/
+
+# Recipe evaluation workspace
+create-recipe-workspace/
