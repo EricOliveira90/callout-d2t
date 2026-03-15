@@ -1,5 +1,6 @@
-# CSV data files
+# CSV and TSV data files
 *.csv
+*.tsv
 
 # Python bytecode
 __pycache__/
