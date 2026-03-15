@@ -1,0 +1,47 @@
+{# Product Selection WoW Detailed Breakdown — full channel × product group analysis #}
+{#
+   Context expected:
+     metrics.<key> for each metric (ba, ftac, awas, awagv), each containing:
+       label, cw_total, lw_total, wow_delta, wow_pct, direction,
+       all_groups[]   — every product group with channels[]
+       all_channels[] — channel-level totals with contribution_pct
+#}
+{% macro divider(char="=", width=90) %}{{ char * width }}{% endmacro %}
+{% macro subdiv(char="-", width=90) %}{{ char * width }}{% endmacro %}
+
+{{ divider() }}
+  PRODUCT SELECTION — WEEK-OVER-WEEK ANALYSIS (DOMESTIC)
+{{ divider() }}
+
+{% for metric_key, m in metrics.items() %}
+{{ subdiv() }}
+  {{ m.label }}
+{{ subdiv() }}
+
+  Total: {{ m.cw_total | compact_k }}  |  WoW: {{ m.wow_delta | signed_k }} ({{ m.wow_pct | signed_pct }})  |  Prior Week: {{ m.lw_total | compact_k }}
+
+  ▸ By Product Group (sorted by |WoW Δ|):
+    {{ "%-26s" | format("Product Group") }}{{ "%-12s" | format("CW") }}{{ "%-12s" | format("WoW Δ") }}{{ "%-10s" | format("WoW %") }}
+    {{ "-" * 60 }}
+{% for g in m.all_groups %}
+    {{ "%-26s" | format(g.name) }}{{ "%-12s" | format(g.cw | compact_k) }}{{ "%-12s" | format(g.wow_delta | signed_k) }}{{ "%-10s" | format(g.wow_pct | signed_pct) }}
+{% endfor %}
+
+  ▸ By Channel (sorted by |WoW Δ|):
+    {{ "%-26s" | format("Channel") }}{{ "%-12s" | format("CW") }}{{ "%-12s" | format("WoW Δ") }}{{ "%-10s" | format("WoW %") }}{{ "%-10s" | format("Contrib%") }}
+    {{ "-" * 70 }}
+{% for ch in m.all_channels %}
+    {{ "%-26s" | format(ch.channel) }}{{ "%-12s" | format(ch.cw | compact_k) }}{{ "%-12s" | format(ch.wow_delta | signed_k) }}{{ "%-10s" | format(ch.wow_pct | signed_pct) }}{{ "%-10s" | format(ch.contribution_pct | signed_pct) }}
+{% endfor %}
+
+  ▸ Product Group × Channel Matrix:
+{% for g in m.all_groups %}
+{% if g.channels %}
+    {{ g.name }}:
+{% for ch in g.channels %}
+      {{ "%-24s" | format(ch.channel) }}{{ "%-12s" | format(ch.cw | compact_k) }}{{ "%-12s" | format(ch.wow_delta | signed_k) }}{{ "%-10s" | format(ch.wow_pct | signed_pct) }}
+{% endfor %}
+{% endif %}
+{% endfor %}
+{% endfor %}
+{{ divider() }}

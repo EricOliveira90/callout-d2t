@@ -32,3 +32,53 @@ recipes:
       period_label: Period
       lookup_group_col: gl_product_group
       lookup_desc_col: gl_category_description
+
+  product_selection_callout:
+    description: "Product Selection WoW executive callout — paragraph-style summary with top drivers/detractors and channel insights"
+    strategy: product_selection_wow
+    template: product_selection_callout
+    inputs:
+      - name: main
+        description: "Product selection data with period, product_group, channel flags (is_fba, is_fbaos, is_es, is_ss), filter flags (is_dom, is_narf, mfn_ooc), and metrics (ba, awagv, awas, ftac)"
+        required: true
+      - name: lookup
+        description: "Product group lookup table (PF-to-GL.csv) mapping gl_product_group to gl_category_description"
+        required: false
+    params:
+      period_col: period
+      product_group_col: product_group
+      is_dom_col: is_dom
+      is_narf_col: is_narf
+      mfn_ooc_col: mfn_ooc
+      metrics: "ba,awagv,awas,ftac"
+      channel_cols: "is_fba,is_fbaos,is_es,is_ss"
+      channel_labels: "FBA,Seller Flex,MFN Easy Ship,MFN Self Ship"
+      lookup_group_col: gl_product_group
+      lookup_desc_col: gl_category_description
+      top_drivers: 2
+      top_detractors: 1
+
+  product_selection_detailed:
+    description: "Product Selection WoW detailed breakdown — full channel × product group matrix for all metrics"
+    strategy: product_selection_wow
+    template: product_selection_detailed
+    inputs:
+      - name: main
+        description: "Product selection data with period, product_group, channel flags (is_fba, is_fbaos, is_es, is_ss), filter flags (is_dom, is_narf, mfn_ooc), and metrics (ba, awagv, awas, ftac)"
+        required: true
+      - name: lookup
+        description: "Product group lookup table (PF-to-GL.csv) mapping gl_product_group to gl_category_description"
+        required: false
+    params:
+      period_col: period
+      product_group_col: product_group
+      is_dom_col: is_dom
+      is_narf_col: is_narf
+      mfn_ooc_col: mfn_ooc
+      metrics: "ba,awagv,awas,ftac"
+      channel_cols: "is_fba,is_fbaos,is_es,is_ss"
+      channel_labels: "FBA,Seller Flex,MFN Easy Ship,MFN Self Ship"
+      lookup_group_col: gl_product_group
+      lookup_desc_col: gl_category_description
+      top_drivers: 2
+      top_detractors: 1
