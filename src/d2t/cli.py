@@ -33,9 +33,10 @@ def cli(ctx, verbose):
 @click.option("--param", "-p", "params", multiple=True, help="Strategy param as key=value (repeatable).")
 @click.option("--strategy-dir", "strategy_dirs", multiple=True, help="Additional strategy search directory.")
 @click.option("--template-dir", "template_dirs", multiple=True, help="Additional template search directory.")
+@click.option("--output", "-o", "output_path", default=None, type=click.Path(), help="Write output to file (e.g. report.md).")
 @click.option("--dry-run", is_flag=True, default=False, help="Validate without rendering.")
 @click.pass_context
-def run(ctx, recipe, strategy, template, inputs, params, strategy_dirs, template_dirs, dry_run):
+def run(ctx, recipe, strategy, template, inputs, params, strategy_dirs, template_dirs, output_path, dry_run):
     """Execute a data-to-text pipeline.
 
     Examples:
@@ -112,7 +113,12 @@ def run(ctx, recipe, strategy, template, inputs, params, strategy_dirs, template
             strategy_filters=strat.get_filters(),
             strategy_globals=strat.get_globals(),
         )
-        click.echo(output, nl=False)
+
+        if output_path:
+            Path(output_path).write_text(output, encoding="utf-8")
+            click.echo(f"Output written to {output_path}", err=True)
+        else:
+            click.echo(output, nl=False)
 
     except click.UsageError:
         raise  # Let click handle usage errors (exit code 2)
