@@ -11,8 +11,8 @@
 {% macro metric_paragraph(m) -%}
 {{ m.label }} {{ m.direction }} to {{ m.cw_total | compact_k }} ({{ m.wow_pct | signed_pct }}; {{ m.wow_delta | wow_fmt }})
 {%- if m.drivers %}, driven primarily by {% for d in m.drivers %}{{ d.name }} ({{ d.wow_pct | signed_pct }}; {{ d.wow_delta | wow_fmt }}){% if not loop.last %} and {% endif %}{% endfor %}{% endif %}.
-{%- if m.drivers and m.drivers[0].channel_insight %} Channel Insight: {{ m.drivers[0].channel_insight }}.{% endif %}
-{%- if m.detractors and m.drivers %} Detractor: This growth was partially offset by {{ m.detractors[0].name }} ({{ m.detractors[0].wow_pct | signed_pct }}; {{ m.detractors[0].wow_delta | wow_fmt }})
+{%- if m.drivers and m.drivers[0].channel_insight %} {{ m.drivers[0].channel_insight }}.{% endif %}
+{%- if m.detractors and m.drivers %} This growth was partially offset by {{ m.detractors[0].name }} ({{ m.detractors[0].wow_pct | signed_pct }}; {{ m.detractors[0].wow_delta | wow_fmt }})
 {%- if m.detractors[0].top_channel %}, which saw a decline specifically within the {{ m.detractors[0].top_channel.channel }} channel ({{ m.detractors[0].top_channel.wow_delta | wow_fmt }}){% endif %}.
 {%- elif m.detractors and not m.drivers %} The decline was driven by {{ m.detractors[0].name }} ({{ m.detractors[0].wow_pct | signed_pct }}; {{ m.detractors[0].wow_delta | wow_fmt }})
 {%- if m.detractors[0].top_channel %}, primarily within the {{ m.detractors[0].top_channel.channel }} channel ({{ m.detractors[0].top_channel.wow_delta | wow_fmt }}){% endif %}.{% endif %}
