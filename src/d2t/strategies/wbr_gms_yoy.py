@@ -48,6 +48,8 @@ class WbrGmsYoy(AnalysisStrategy):
         channel_col="channel",
         gms_col="net_ordered_gms_usd",
         period_label="Period",
+        lookup_group_col="gl_product_group",
+        lookup_desc_col="gl_category_description",
     ):
         self.year_col = year_col
         self.product_group_col = product_group_col
@@ -55,6 +57,52 @@ class WbrGmsYoy(AnalysisStrategy):
         self.channel_col = channel_col
         self.gms_col = gms_col
         self.period_label = period_label
+        self.lookup_group_col = lookup_group_col
+        self.lookup_desc_col = lookup_desc_col
+
+    def _build_lookup(self, inputs):
+        """Build a product-group-id → description mapping from the lookup input.
+
+        Returns an empty dict when no ``lookup`` input is provided.
+        """
+        if "lookup" not in inputs:
+            return {}
+
+        lookup_rows = inputs["lookup"]
+        if not lookup_rows:
+            return {}
+
+        first = lookup_rows[0]
+        if self.lookup_group_col not in first or self.lookup_desc_col not in first:
+            raise StrategyProcessingError(
+                f"Lookup table must contain columns '{self.lookup_group_col}' "
+                f"and '{self.lookup_desc_col}'. "
+                f"Available: {', '.join(first.keys())}"
+            )
+
+        mapping = {}
+        for row in lookup_rows:
+            try:
+                key = int(float(str(row[self.lookup_group_col])))
+            except (ValueError, TypeError):
+                continue
+            mapping[key] = str(row[self.lookup_desc_col])
+        return mapping
+
+    @staticmethod
+    def _normalize_product_group(raw_value):
+        """Convert a product_group value to int (e.g. 60.0 → 60, '328.00' → 328)."""
+        try:
+            return int(float(str(raw_value)))
+        except (ValueError, TypeError):
+            return raw_value
+
+    def _resolve_product_group(self, raw_value, lookup):
+        """Return the human-readable description for a product group, or the raw value."""
+        key = self._normalize_product_group(raw_value)
+        if lookup and key in lookup:
+            return lookup[key]
+        return str(key)
 
     def process(self, inputs):
         if "main" not in inputs:
@@ -68,6 +116,15 @@ class WbrGmsYoy(AnalysisStrategy):
 
         if not rows:
             raise StrategyProcessingError("Input 'main' is empty — no rows to process.")
+
+        # Build optional product-group lookup
+        pg_lookup = self._build_lookup(inputs)
+
+        # Normalize product_group values in every row so grouping is consistent
+        for row in rows:
+            row[self.product_group_col] = self._resolve_product_group(
+                row[self.product_group_col], pg_lookup
+            )
 
         # Validate columns
         first = rows[0]

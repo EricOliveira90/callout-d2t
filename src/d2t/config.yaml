@@ -20,6 +20,9 @@ recipes:
       - name: main
         description: "Sales data with year, product_group, seller_name, channel, net_ordered_gms_usd columns"
         required: true
+      - name: lookup
+        description: "Product group lookup table mapping numeric IDs to descriptions (e.g. PF-to-GL.csv)"
+        required: false
     params:
       year_col: year
       product_group_col: product_group
@@ -27,3 +30,5 @@ recipes:
       channel_col: channel
       gms_col: net_ordered_gms_usd
       period_label: Period
+      lookup_group_col: gl_product_group
+      lookup_desc_col: gl_category_description

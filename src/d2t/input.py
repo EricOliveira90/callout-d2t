@@ -29,17 +29,24 @@ def _coerce_value(value: str):
 
 
 def parse_csv(path: Path) -> list[dict]:
-    """Parse a CSV file into a list of dicts with auto-coerced values."""
+    """Parse a CSV or TSV file into a list of dicts with auto-coerced values.
+
+    The delimiter is chosen automatically based on file extension:
+    ``.tsv`` files use tab, everything else uses comma.
+    """
     if not path.exists():
         raise InputNotFoundError(str(path))
 
+    delimiter = "\t" if path.suffix.lower() == ".tsv" else ","
     text = path.read_text(encoding="utf-8")
-    return _parse_csv_text(text, source=str(path))
+    return _parse_csv_text(text, source=str(path), delimiter=delimiter)
 
 
-def _parse_csv_text(text: str, source: str = "<stdin>") -> list[dict]:
-    """Parse CSV text into a list of dicts."""
-    reader = csv.DictReader(io.StringIO(text))
+def _parse_csv_text(
+    text: str, source: str = "<stdin>", delimiter: str = ","
+) -> list[dict]:
+    """Parse CSV/TSV text into a list of dicts."""
+    reader = csv.DictReader(io.StringIO(text), delimiter=delimiter)
     if reader.fieldnames is None:
         raise InputParseError(f"No columns found in {source}")
 
