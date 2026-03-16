@@ -1,0 +1,82 @@
+{# WBR GMS YoY Detailed Breakdown — full product group × seller × channel analysis #}
+{#
+   Context expected (from wbr_gms_yoy strategy):
+     period_label          — e.g. "Q1 2026"
+     latest_year           — int
+     previous_year         — int
+     total_gms             — float (current year)
+     prev_total_gms        — float (prior year)
+     yoy_delta             — float
+     yoy_pct               — float
+     categories[]          — all product groups, each with:
+         product_group, gms, prev_gms, yoy_delta, yoy_pct,
+         top_seller_name, top_seller_channel, top_seller_yoy_delta,
+         is_positive, sellers[] (each: seller_name, channel, gms, prev_gms, yoy_delta, yoy_pct)
+     positive_categories[] — subset where yoy_delta >= 0
+     negative_categories[] — subset where yoy_delta < 0
+     channels[]            — channel-level totals, each with:
+         channel, gms, prev_gms, yoy_delta, yoy_pct
+#}
+---
+tags:
+  - Callout/detailed
+period: {{ period_label }}
+metric: gms
+---
+
+# WBR GMS — YoY ANALYSIS
+
+## Summary
+
+**Period:** {{ period_label }}  |  **Total GMS:** {{ total_gms | compact_currency(signed=false) }}  |  **YoY:** {{ yoy_delta | compact_currency }} ({{ yoy_pct | signed_pct }})  |  **Prior Year:** {{ prev_total_gms | compact_currency(signed=false) }}
+
+## By Product Group (sorted by |YoY Δ|)
+
+| Product Group | CY GMS | PY GMS | YoY Δ | YoY % | Top Seller Driver |
+|---|---|---|---|---|---|
+{% for cat in categories %}
+| {{ cat.product_group }} | {{ cat.gms | compact_currency(signed=false) }} | {{ cat.prev_gms | compact_currency(signed=false) }} | {{ cat.yoy_delta | compact_currency }} | {{ cat.yoy_pct | signed_pct }} | {{ cat.top_seller_name }}{% if cat.top_seller_channel %} ({{ cat.top_seller_channel }}){% endif %} |
+{% endfor %}
+
+{% if positive_categories %}
+#### Positive Contributors
+
+| Product Group | CY GMS | YoY Δ | YoY % | Top Seller Driver |
+|---|---|---|---|---|
+{% for cat in positive_categories %}
+| {{ cat.product_group }} | {{ cat.gms | compact_currency(signed=false) }} | {{ cat.yoy_delta | compact_currency }} | {{ cat.yoy_pct | signed_pct }} | {{ cat.top_seller_name }}{% if cat.top_seller_channel %} ({{ cat.top_seller_channel }}, {{ cat.top_seller_yoy_delta | compact_currency }}){% endif %} |
+{% endfor %}
+{% endif %}
+
+{% if negative_categories %}
+#### Negative Contributors
+
+| Product Group | CY GMS | YoY Δ | YoY % | Top Seller Offender |
+|---|---|---|---|---|
+{% for cat in negative_categories %}
+| {{ cat.product_group }} | {{ cat.gms | compact_currency(signed=false) }} | {{ cat.yoy_delta | compact_currency }} | {{ cat.yoy_pct | signed_pct }} | {{ cat.top_seller_name }}{% if cat.top_seller_channel %} ({{ cat.top_seller_channel }}, {{ cat.top_seller_yoy_delta | compact_currency }}){% endif %} |
+{% endfor %}
+{% endif %}
+
+## By Channel (sorted by |YoY Δ|)
+
+| Channel | CY GMS | PY GMS | YoY Δ | YoY % |
+|---|---|---|---|---|
+{% for ch in channels %}
+| {{ ch.channel }} | {{ ch.gms | compact_currency(signed=false) }} | {{ ch.prev_gms | compact_currency(signed=false) }} | {{ ch.yoy_delta | compact_currency }} | {{ ch.yoy_pct | signed_pct }} |
+{% endfor %}
+
+## Product Group × Seller Breakdown
+
+{% for cat in categories %}
+{% if cat.sellers %}
+#### {{ cat.product_group }} ({{ cat.yoy_pct | signed_pct }} YoY)
+
+| Seller | Channel | CY GMS | PY GMS | YoY Δ | YoY % |
+|---|---|---|---|---|---|
+{% for s in cat.sellers %}
+| {{ s.seller_name }} | {{ s.channel }} | {{ s.gms | compact_currency(signed=false) }} | {{ s.prev_gms | compact_currency(signed=false) }} | {{ s.yoy_delta | compact_currency }} | {{ s.yoy_pct | signed_pct }} |
+{% endfor %}
+
+{% endif %}
+{% endfor %}

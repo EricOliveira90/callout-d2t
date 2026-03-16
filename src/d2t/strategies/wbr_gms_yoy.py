@@ -272,6 +272,61 @@ class WbrGmsYoy(AnalysisStrategy):
         positive_categories = [c for c in categories if c["is_positive"]]
         negative_categories = [c for c in categories if not c["is_positive"]]
 
+        # --- Step 6: Detailed seller breakdown per category ---
+        for cat_entry in categories:
+            cat = cat_entry["product_group"]
+            latest_sellers = group_by_seller(latest_rows, cat)
+            prev_sellers_map = group_by_seller(prev_rows, cat)
+            all_cat_sellers = set(latest_sellers.keys()) | set(prev_sellers_map.keys())
+
+            sellers_detail = []
+            for seller in all_cat_sellers:
+                s_gms = latest_sellers.get(seller, {"gms": 0.0, "channel": ""})["gms"]
+                s_prev = prev_sellers_map.get(seller, {"gms": 0.0, "channel": ""})["gms"]
+                s_channel = (
+                    latest_sellers.get(seller, {"channel": ""})["channel"]
+                    or prev_sellers_map.get(seller, {"channel": ""})["channel"]
+                )
+                s_delta = s_gms - s_prev
+                s_pct = (s_delta / s_prev * 100) if s_prev != 0 else 0.0
+                sellers_detail.append({
+                    "seller_name": seller,
+                    "channel": s_channel,
+                    "gms": s_gms,
+                    "prev_gms": s_prev,
+                    "yoy_delta": s_delta,
+                    "yoy_pct": s_pct,
+                })
+            sellers_detail.sort(key=lambda s: abs(s["yoy_delta"]), reverse=True)
+            cat_entry["sellers"] = sellers_detail
+
+        # --- Step 7: Channel-level aggregation ---
+        def group_by_channel(row_list):
+            """Returns {channel: total_gms}"""
+            channels = defaultdict(float)
+            for row in row_list:
+                channels[row[self.channel_col]] += safe_gms(row)
+            return channels
+
+        latest_by_channel = group_by_channel(latest_rows)
+        prev_by_channel = group_by_channel(prev_rows)
+        all_channel_keys = set(latest_by_channel.keys()) | set(prev_by_channel.keys())
+
+        channels = []
+        for ch in all_channel_keys:
+            ch_gms = latest_by_channel.get(ch, 0.0)
+            ch_prev = prev_by_channel.get(ch, 0.0)
+            ch_delta = ch_gms - ch_prev
+            ch_pct = (ch_delta / ch_prev * 100) if ch_prev != 0 else 0.0
+            channels.append({
+                "channel": ch,
+                "gms": ch_gms,
+                "prev_gms": ch_prev,
+                "yoy_delta": ch_delta,
+                "yoy_pct": ch_pct,
+            })
+        channels.sort(key=lambda c: abs(c["yoy_delta"]), reverse=True)
+
         return {
             "period_label": self.period_label,
             "latest_year": latest_year,
@@ -283,6 +338,7 @@ class WbrGmsYoy(AnalysisStrategy):
             "categories": categories,
             "positive_categories": positive_categories,
             "negative_categories": negative_categories,
+            "channels": channels,
         }
 
     def get_filters(self):
