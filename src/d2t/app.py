@@ -100,20 +100,21 @@ def main():
     if recipe_params:
         with st.expander("Advanced Parameters", expanded=False):
             for key, default in recipe_params.items():
-                value = st.text_input(key, value=str(default))
+                value = st.text_input(key, value=str(default), key=f"{selected_key}_{key}")
                 if value != str(default):
                     param_overrides[key] = value
 
     # Run button
     run_disabled = uploaded_file is None
     if st.button("Generate Report", disabled=run_disabled):
-        # Write uploaded file to temp file so parse_csv can read it
-        suffix = "." + (uploaded_file.name.rsplit(".", 1)[-1] if "." in uploaded_file.name else "csv")
-        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-            tmp.write(uploaded_file.getbuffer())
-            tmp_path = Path(tmp.name)
-
+        tmp_path = None
         try:
+            # Write uploaded file to temp file so parse_csv can read it
+            suffix = "." + (uploaded_file.name.rsplit(".", 1)[-1] if "." in uploaded_file.name else "csv")
+            with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+                tmp.write(uploaded_file.getbuffer())
+                tmp_path = Path(tmp.name)
+
             with st.spinner("Generating report..."):
                 output = generate_report(
                     recipe_name=selected_key,
@@ -140,7 +141,8 @@ def main():
                 import traceback
                 st.code(traceback.format_exc())
         finally:
-            tmp_path.unlink(missing_ok=True)
+            if tmp_path is not None:
+                tmp_path.unlink(missing_ok=True)
 
 
 if __name__ == "__main__":
