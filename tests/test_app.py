@@ -1,6 +1,5 @@
 """Tests for the Streamlit app helpers."""
 
-import tempfile
 from pathlib import Path
 
 import pytest
