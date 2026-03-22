@@ -10,7 +10,7 @@ A Streamlit web app that wraps the existing d2t pipeline. Users double-click a `
 
 ## User Flow
 
-1. **Pick a recipe** — dropdown with the 4 recipes (WBR GMS Callout, WBR GMS Detailed, Product Selection Callout, Product Selection Detailed). Recipe description shown below.
+1. **Pick a recipe** — dropdown with all recipes defined in `config.yaml` (currently 5: Monthly Revenue, WBR GMS Callout, WBR GMS Detailed, Product Selection Callout, Product Selection Detailed). Recipe description shown below. New recipes added to config.yaml appear automatically.
 2. **Upload the main file** — drag-and-drop area accepting `.csv` / `.tsv`.
 3. **Optional parameters** — expandable "Advanced Parameters" section with all recipe params pre-filled with defaults. Most users never open this.
 4. **Run** — click "Generate Report". Disabled until a file is uploaded.
@@ -26,19 +26,21 @@ The Streamlit app is a thin wrapper around the existing d2t pipeline. No logic d
 app.py (Streamlit UI)
   |
   +-- recipe.py   -> load_recipe() to get params, inputs, descriptions
-  +-- input.py    -> read_csv() to parse uploaded file
-  +-- strategy.py -> load_strategy() + strategy.process()
-  +-- engine.py   -> render() to produce output
+  +-- input.py    -> parse_csv(path) to parse uploaded file
+  +-- strategy.py -> load_strategy(name, params) + strategy.process()
+  +-- engine.py   -> render(template, context, template_dirs, filters, globals)
 ```
 
 ### Data flow
 
-1. User selects recipe -> `load_recipe(name)` returns strategy name, template name, default params, input definitions
-2. User uploads file -> saved to a temp file, path passed to `read_csv()`
-3. User clicks Run -> `load_strategy(strategy_name)` instantiated with merged params (defaults + user overrides)
-4. Strategy's `process(inputs)` produces context dict
-5. `render(template_name, context, filters, globals)` produces output string
-6. Output displayed in Streamlit
+1. User selects recipe -> `load_recipe(name)` returns strategy name, template name, default params, input definitions, and relations
+2. User uploads file -> written to a temp file so `parse_csv(Path)` can read it (Streamlit's `UploadedFile` is in-memory; `parse_csv` requires a filesystem path)
+3. **Auto-load default inputs** -> iterate recipe's `inputs` list; for any input with a `default_path` that the user did not upload, call `parse_csv(Path(default_path))` to load it (this is how the lookup file gets populated)
+4. **Inject relations** -> if the recipe defines `relations`, add them to the strategy params dict (`strategy_params["relations"] = recipe_data["relations"]`). This is required for all WBR/selection recipes.
+5. User clicks Run -> `load_strategy(strategy_name, merged_params)` instantiated with merged params (config defaults + relations + user overrides). Params from `st.text_input` are strings; `load_strategy` handles coercion to int/float/bool internally via `coerce_param()`.
+6. Strategy's `process(inputs)` produces context dict
+7. `render(template_name, context, template_dirs=[], strategy.get_filters(), strategy.get_globals())` produces output string
+8. Output displayed in Streamlit with `st.spinner("Generating report...")` during steps 5-7
 
 ### Error handling
 
@@ -64,12 +66,12 @@ Top to bottom, single centered column:
 ### New files
 
 - `src/d2t/app.py` — the Streamlit app (single file, entire UI)
-- `run_d2t.bat` — launcher: `streamlit run src/d2t/app.py`
+- `run_d2t.bat` — launcher using `%~dp0` for path resolution so it works from shortcuts: `streamlit run "%~dp0src\d2t\app.py"`
 - `setup.bat` — one-time install: `pip install -e ".[gui]"`
 
 ### Modified files
 
-- `pyproject.toml` — add `streamlit` as an optional dependency under a `[gui]` extra
+- `pyproject.toml` — add a new `[project.optional-dependencies]` `gui` extra with `streamlit` (alongside the existing `dev` extra)
 
 ### No changes to
 
