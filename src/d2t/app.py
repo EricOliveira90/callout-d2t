@@ -122,14 +122,15 @@ def main():
                     param_overrides=param_overrides,
                 )
 
-            # Display output in two tabs
-            # Note: st.code() includes a built-in copy icon in the top-right corner,
-            # which serves as the "Copy to clipboard" feature from the spec.
-            tab_preview, tab_raw = st.tabs(["Preview", "Raw Markdown"])
-            with tab_preview:
-                st.markdown(output)
-            with tab_raw:
-                st.code(output, language="markdown")
+            # Display raw output in a styled text area
+            st.markdown(
+                '<div style="font-family: Arial, sans-serif; background: #f8f9fa; '
+                'border: 1px solid #ddd; border-radius: 4px; padding: 1em; '
+                'white-space: pre-wrap; line-height: 1.6;">'
+                + output.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                + "</div>",
+                unsafe_allow_html=True,
+            )
 
         except (InputNotFoundError, InputParseError) as e:
             st.error("Could not read file. Make sure it's a valid CSV or TSV.")
