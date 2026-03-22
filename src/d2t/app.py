@@ -60,3 +60,88 @@ def generate_report(
         strategy_globals=strat.get_globals(),
     )
     return output
+
+
+def main():
+    """Streamlit app entry point."""
+    import streamlit as st
+    import tempfile
+
+    from d2t.errors import InputNotFoundError, InputParseError
+
+    st.set_page_config(page_title="D2T Report Generator", layout="centered")
+    st.title("D2T Report Generator")
+    st.caption("Generate WBR reports from CSV/TSV data.")
+
+    # Load available recipes
+    from d2t.recipe import list_recipes
+
+    available = list_recipes()
+    recipe_keys = [r["name"] for r in available]
+    recipe_labels = [recipe_display_name(k) for k in recipe_keys]
+    label_to_key = dict(zip(recipe_labels, recipe_keys))
+
+    # Recipe selector
+    selected_label = st.selectbox("Recipe", recipe_labels)
+    selected_key = label_to_key[selected_label]
+    recipe_data = load_recipe(selected_key)
+    st.caption(recipe_data.get("description", ""))
+
+    # File uploader
+    main_input = next(
+        (i for i in recipe_data.get("inputs", []) if i["name"] == "main"), None
+    )
+    upload_label = main_input["description"] if main_input else "Upload data file"
+    uploaded_file = st.file_uploader(upload_label, type=["csv", "tsv"])
+
+    # Advanced parameters
+    param_overrides = {}
+    recipe_params = recipe_data.get("params", {})
+    if recipe_params:
+        with st.expander("Advanced Parameters", expanded=False):
+            for key, default in recipe_params.items():
+                value = st.text_input(key, value=str(default))
+                if value != str(default):
+                    param_overrides[key] = value
+
+    # Run button
+    run_disabled = uploaded_file is None
+    if st.button("Generate Report", disabled=run_disabled):
+        # Write uploaded file to temp file so parse_csv can read it
+        suffix = "." + (uploaded_file.name.rsplit(".", 1)[-1] if "." in uploaded_file.name else "csv")
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+            tmp.write(uploaded_file.getbuffer())
+            tmp_path = Path(tmp.name)
+
+        try:
+            with st.spinner("Generating report..."):
+                output = generate_report(
+                    recipe_name=selected_key,
+                    main_file_path=tmp_path,
+                    param_overrides=param_overrides,
+                )
+
+            # Display output in two tabs
+            # Note: st.code() includes a built-in copy icon in the top-right corner,
+            # which serves as the "Copy to clipboard" feature from the spec.
+            tab_preview, tab_raw = st.tabs(["Preview", "Raw Markdown"])
+            with tab_preview:
+                st.markdown(output)
+            with tab_raw:
+                st.code(output, language="markdown")
+
+        except (InputNotFoundError, InputParseError) as e:
+            st.error("Could not read file. Make sure it's a valid CSV or TSV.")
+            with st.expander("Show details"):
+                st.code(str(e))
+        except Exception as e:
+            st.error(f"Report generation failed: {e}")
+            with st.expander("Show details"):
+                import traceback
+                st.code(traceback.format_exc())
+        finally:
+            tmp_path.unlink(missing_ok=True)
+
+
+if __name__ == "__main__":
+    main()
