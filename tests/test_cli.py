@@ -88,15 +88,6 @@ class TestRunCommand:
         assert result.exit_code == 0
         assert "Dry run: OK" in result.output  # goes to stderr, but CliRunner mixes them
 
-    def test_run_with_builtin_recipe(self):
-        result = self.runner.invoke(cli, [
-            "run",
-            "-r", "monthly_revenue",
-            "-i", f"main={FIXTURES / 'sales.csv'}",
-        ])
-        assert result.exit_code == 0
-        assert "Monthly Report" in result.output
-
     def test_run_strategy_processing_error(self):
         result = self.runner.invoke(cli, [
             "run",
@@ -153,14 +144,14 @@ class TestListCommand:
     def test_list_recipes(self):
         result = self.runner.invoke(cli, ["list", "recipes"])
         assert result.exit_code == 0
-        assert "monthly_revenue" in result.output
+        assert "wbr_gms_callout" in result.output
 
     def test_list_recipes_json(self):
         result = self.runner.invoke(cli, ["list", "recipes", "--json"])
         assert result.exit_code == 0
         data = json.loads(result.output)
         names = [r["name"] for r in data]
-        assert "monthly_revenue" in names
+        assert "wbr_gms_callout" in names
 
 
 class TestVersionFlag:

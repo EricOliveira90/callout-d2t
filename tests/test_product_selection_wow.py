@@ -194,8 +194,8 @@ class TestProductSelectionWowStrategy:
         ctx = strategy_with_lookup.process(inputs_with_lookup)
         ba = ctx["metrics"]["ba"]
         group_names = {g["name"] for g in ba["all_groups"]}
-        # Product group 60 → Home Improvement, 21 → Toys, etc.
-        assert "Home Improvement" in group_names
+        # Product group 60 → Home Improvement & Tools, 21 → Toys, etc.
+        assert "Home Improvement & Tools" in group_names
         assert "Toys" in group_names
 
     def test_direction_field(self, strategy, inputs):

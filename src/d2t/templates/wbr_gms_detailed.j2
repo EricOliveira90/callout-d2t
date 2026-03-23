@@ -10,8 +10,8 @@
      yoy_pct               — float
      categories[]          — all product groups, each with:
          product_group, gms, prev_gms, yoy_delta, yoy_pct,
-         top_seller_name, top_seller_channel, top_seller_yoy_delta,
-         is_positive, sellers[] (each: seller_name, channel, gms, prev_gms, yoy_delta, yoy_pct)
+         top_seller_name, top_seller_channel, top_seller_program, top_seller_yoy_delta,
+         is_positive, sellers[] (each: seller_name, channel, program, gms, prev_gms, yoy_delta, yoy_pct)
      positive_categories[] — subset where yoy_delta >= 0
      negative_categories[] — subset where yoy_delta < 0
      channels[]            — channel-level totals, each with:
@@ -35,7 +35,7 @@ metric: gms
 | Product Group | CY GMS | PY GMS | YoY Δ | YoY % | Top Seller Driver |
 |---|---|---|---|---|---|
 {% for cat in categories %}
-| {{ cat.product_group }} | {{ cat.gms | compact_currency(signed=false) }} | {{ cat.prev_gms | compact_currency(signed=false) }} | {{ cat.yoy_delta | compact_currency }} | {{ cat.yoy_pct | signed_pct }} | {{ cat.top_seller_name }}{% if cat.top_seller_channel %} ({{ cat.top_seller_channel }}){% endif %} |
+| {{ cat.product_group }} | {{ cat.gms | compact_currency(signed=false) }} | {{ cat.prev_gms | compact_currency(signed=false) }} | {{ cat.yoy_delta | compact_currency }} | {{ cat.yoy_pct | signed_pct }} | {{ cat.top_seller_name }}{% if cat.top_seller_program %} ({{ cat.top_seller_program }}){% endif %} |
 {% endfor %}
 
 {% if positive_categories %}
@@ -44,7 +44,7 @@ metric: gms
 | Product Group | CY GMS | YoY Δ | YoY % | Top Seller Driver |
 |---|---|---|---|---|
 {% for cat in positive_categories %}
-| {{ cat.product_group }} | {{ cat.gms | compact_currency(signed=false) }} | {{ cat.yoy_delta | compact_currency }} | {{ cat.yoy_pct | signed_pct }} | {{ cat.top_seller_name }}{% if cat.top_seller_channel %} ({{ cat.top_seller_channel }}, {{ cat.top_seller_yoy_delta | compact_currency }}){% endif %} |
+| {{ cat.product_group }} | {{ cat.gms | compact_currency(signed=false) }} | {{ cat.yoy_delta | compact_currency }} | {{ cat.yoy_pct | signed_pct }} | {{ cat.top_seller_name }}{% if cat.top_seller_program %} ({{ cat.top_seller_program }}, {{ cat.top_seller_yoy_delta | compact_currency }}){% endif %} |
 {% endfor %}
 {% endif %}
 
@@ -54,7 +54,7 @@ metric: gms
 | Product Group | CY GMS | YoY Δ | YoY % | Top Seller Offender |
 |---|---|---|---|---|
 {% for cat in negative_categories %}
-| {{ cat.product_group }} | {{ cat.gms | compact_currency(signed=false) }} | {{ cat.yoy_delta | compact_currency }} | {{ cat.yoy_pct | signed_pct }} | {{ cat.top_seller_name }}{% if cat.top_seller_channel %} ({{ cat.top_seller_channel }}, {{ cat.top_seller_yoy_delta | compact_currency }}){% endif %} |
+| {{ cat.product_group }} | {{ cat.gms | compact_currency(signed=false) }} | {{ cat.yoy_delta | compact_currency }} | {{ cat.yoy_pct | signed_pct }} | {{ cat.top_seller_name }}{% if cat.top_seller_program %} ({{ cat.top_seller_program }}, {{ cat.top_seller_yoy_delta | compact_currency }}){% endif %} |
 {% endfor %}
 {% endif %}
 
@@ -69,14 +69,28 @@ metric: gms
 ## Product Group × Seller Breakdown
 
 {% for cat in categories %}
-{% if cat.sellers %}
-#### {{ cat.product_group }} ({{ cat.yoy_pct | signed_pct }} YoY)
+{% if cat.top_sellers or cat.bottom_sellers %}
+#### {{ cat.product_group }} ({{ cat.yoy_pct | signed_pct }} YoY) — {{ cat.total_seller_count }} sellers{% if cat.sellers_truncated %}, showing top 20 & bottom 20{% endif %}
 
-| Seller | Channel | CY GMS | PY GMS | YoY Δ | YoY % |
-|---|---|---|---|---|---|
-{% for s in cat.sellers %}
-| {{ s.seller_name }} | {{ s.channel }} | {{ s.gms | compact_currency(signed=false) }} | {{ s.prev_gms | compact_currency(signed=false) }} | {{ s.yoy_delta | compact_currency }} | {{ s.yoy_pct | signed_pct }} |
+{% if cat.top_sellers %}
+**Top 20 Growers**
+
+| Seller | Program | Channel | CY GMS | PY GMS | YoY Δ | YoY % |
+|---|---|---|---|---|---|---|
+{% for s in cat.top_sellers %}
+| {{ s.seller_name }} | {{ s.program }} | {{ s.channel }} | {{ s.gms | compact_currency(signed=false) }} | {{ s.prev_gms | compact_currency(signed=false) }} | {{ s.yoy_delta | compact_currency }} | {{ s.yoy_pct | signed_pct }} |
 {% endfor %}
+{% endif %}
+
+{% if cat.bottom_sellers %}
+**Bottom 20 Decliners**
+
+| Seller | Program | Channel | CY GMS | PY GMS | YoY Δ | YoY % |
+|---|---|---|---|---|---|---|
+{% for s in cat.bottom_sellers %}
+| {{ s.seller_name }} | {{ s.program }} | {{ s.channel }} | {{ s.gms | compact_currency(signed=false) }} | {{ s.prev_gms | compact_currency(signed=false) }} | {{ s.yoy_delta | compact_currency }} | {{ s.yoy_pct | signed_pct }} |
+{% endfor %}
+{% endif %}
 
 {% endif %}
 {% endfor %}

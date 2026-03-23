@@ -46,52 +46,66 @@ class WbrGmsYoy(AnalysisStrategy):
         product_group_col="product_group",
         seller_name_col="seller_name",
         channel_col="channel",
+        program_col="program",
         gms_col="net_ordered_gms_usd",
         period_label="Period",
         lookup_group_col="gl_product_group",
         lookup_desc_col="gl_category_description",
+        relations=None,
     ):
         self.year_col = year_col
         self.product_group_col = product_group_col
         self.seller_name_col = seller_name_col
         self.channel_col = channel_col
+        self.program_col = program_col
         self.gms_col = gms_col
         self.period_label = period_label
         self.lookup_group_col = lookup_group_col
         self.lookup_desc_col = lookup_desc_col
+        self.relations = relations or []
+
+    def _find_relation(self, main_key):
+        """Find the first relation matching a given main_key column name."""
+        for rel in self.relations:
+            if rel.get("main_key") == main_key:
+                return rel
+        return None
 
     def _build_lookup(self, inputs):
         """Build a product-group-id → description mapping from the lookup input.
 
+        When a ``relation`` is configured for the ``product_group_col``, the
+        relation's ``lookup_key`` and ``group_by`` columns are used instead of
+        the legacy ``lookup_group_col`` / ``lookup_desc_col`` params.  This
+        supports 1:n relationships where many product-group IDs map to the
+        same description and the output should group by ``group_by``.
+
         Returns an empty dict when no ``lookup`` input is provided.
         """
-        if "lookup" not in inputs:
+        # Determine which lookup input, key column, and description column to use
+        relation = self._find_relation(self.product_group_col)
+        if relation:
+            lookup_input_name = relation.get("lookup_input", "lookup")
+            lookup_key_col = relation["lookup_key"]
+            lookup_desc_col = relation["group_by"]
+        else:
+            lookup_input_name = "lookup"
+            lookup_key_col = self.lookup_group_col
+            lookup_desc_col = self.lookup_desc_col
+
+        if lookup_input_name not in inputs:
             return {}
 
-        lookup_rows = inputs["lookup"]
-        if not lookup_rows:
-            return {}
-
-        first = lookup_rows[0]
-        if self.lookup_group_col not in first or self.lookup_desc_col not in first:
-            raise StrategyProcessingError(
-                f"Lookup table must contain columns '{self.lookup_group_col}' "
-                f"and '{self.lookup_desc_col}'. "
-                f"Available: {', '.join(first.keys())}"
-            )
-
+        lookup_rows = inputs[lookup_input_name]
         mapping = {}
         for row in lookup_rows:
-            try:
-                key = int(float(str(row[self.lookup_group_col])))
-            except (ValueError, TypeError):
-                continue
-            mapping[key] = str(row[self.lookup_desc_col])
+            key = self._normalize_product_group(row.get(lookup_key_col))
+            desc = row.get(lookup_desc_col, str(key))
+            mapping[key] = desc
         return mapping
 
-    @staticmethod
-    def _normalize_product_group(raw_value):
-        """Convert a product_group value to int (e.g. 60.0 → 60, '328.00' → 328)."""
+    def _normalize_product_group(self, raw_value):
+        """Normalize a product group value to int when possible for consistent lookup."""
         try:
             return int(float(str(raw_value)))
         except (ValueError, TypeError):
@@ -199,15 +213,20 @@ class WbrGmsYoy(AnalysisStrategy):
 
         all_categories = set(latest_by_cat.keys()) | set(prev_by_cat.keys())
 
+        # Check if program column exists in data
+        has_program_col = self.program_col in first
+
         # --- Step 5: For each category, find top seller by YoY delta ---
         def group_by_seller(row_list, category):
-            """Returns {(seller_name, channel): total_gms} for a given category."""
-            sellers = defaultdict(lambda: {"gms": 0.0, "channel": ""})
+            """Returns {seller_name: {gms, channel, program}} for a given category."""
+            sellers = defaultdict(lambda: {"gms": 0.0, "channel": "", "program": ""})
             for row in row_list:
                 if row[self.product_group_col] == category:
                     key = row[self.seller_name_col]
                     sellers[key]["gms"] += safe_gms(row)
                     sellers[key]["channel"] = row[self.channel_col]
+                    if has_program_col:
+                        sellers[key]["program"] = row[self.program_col]
             return sellers
 
         categories = []
@@ -224,20 +243,27 @@ class WbrGmsYoy(AnalysisStrategy):
 
             top_seller_name = ""
             top_seller_channel = ""
+            top_seller_program = ""
             top_seller_yoy_delta = 0.0
 
             if all_sellers:
                 seller_deltas = []
                 for seller in all_sellers:
-                    s_gms = latest_sellers.get(seller, {"gms": 0.0, "channel": ""})["gms"]
-                    s_prev = prev_sellers.get(seller, {"gms": 0.0, "channel": ""})["gms"]
+                    s_default = {"gms": 0.0, "channel": "", "program": ""}
+                    s_gms = latest_sellers.get(seller, s_default)["gms"]
+                    s_prev = prev_sellers.get(seller, s_default)["gms"]
                     s_channel = (
-                        latest_sellers.get(seller, {"channel": ""})["channel"]
-                        or prev_sellers.get(seller, {"channel": ""})["channel"]
+                        latest_sellers.get(seller, s_default)["channel"]
+                        or prev_sellers.get(seller, s_default)["channel"]
+                    )
+                    s_program = (
+                        latest_sellers.get(seller, s_default)["program"]
+                        or prev_sellers.get(seller, s_default)["program"]
                     )
                     seller_deltas.append({
                         "seller_name": seller,
                         "channel": s_channel,
+                        "program": s_program,
                         "yoy_delta": s_gms - s_prev,
                     })
 
@@ -252,6 +278,7 @@ class WbrGmsYoy(AnalysisStrategy):
                 top = sorted_sellers[0]
                 top_seller_name = top["seller_name"]
                 top_seller_channel = top["channel"]
+                top_seller_program = top["program"]
                 top_seller_yoy_delta = top["yoy_delta"]
 
             categories.append({
@@ -262,6 +289,7 @@ class WbrGmsYoy(AnalysisStrategy):
                 "yoy_pct": cat_yoy_pct,
                 "top_seller_name": top_seller_name,
                 "top_seller_channel": top_seller_channel,
+                "top_seller_program": top_seller_program,
                 "top_seller_yoy_delta": top_seller_yoy_delta,
                 "is_positive": cat_yoy_delta >= 0,
             })
@@ -281,24 +309,46 @@ class WbrGmsYoy(AnalysisStrategy):
 
             sellers_detail = []
             for seller in all_cat_sellers:
-                s_gms = latest_sellers.get(seller, {"gms": 0.0, "channel": ""})["gms"]
-                s_prev = prev_sellers_map.get(seller, {"gms": 0.0, "channel": ""})["gms"]
+                s_default = {"gms": 0.0, "channel": "", "program": ""}
+                s_gms = latest_sellers.get(seller, s_default)["gms"]
+                s_prev = prev_sellers_map.get(seller, s_default)["gms"]
                 s_channel = (
-                    latest_sellers.get(seller, {"channel": ""})["channel"]
-                    or prev_sellers_map.get(seller, {"channel": ""})["channel"]
+                    latest_sellers.get(seller, s_default)["channel"]
+                    or prev_sellers_map.get(seller, s_default)["channel"]
+                )
+                s_program = (
+                    latest_sellers.get(seller, s_default)["program"]
+                    or prev_sellers_map.get(seller, s_default)["program"]
                 )
                 s_delta = s_gms - s_prev
                 s_pct = (s_delta / s_prev * 100) if s_prev != 0 else 0.0
                 sellers_detail.append({
                     "seller_name": seller,
                     "channel": s_channel,
+                    "program": s_program,
                     "gms": s_gms,
                     "prev_gms": s_prev,
                     "yoy_delta": s_delta,
                     "yoy_pct": s_pct,
                 })
             sellers_detail.sort(key=lambda s: abs(s["yoy_delta"]), reverse=True)
+
+            # Limit to top 20 and bottom 20 sellers by YoY delta
+            positive_sellers = [s for s in sellers_detail if s["yoy_delta"] >= 0]
+            negative_sellers = [s for s in sellers_detail if s["yoy_delta"] < 0]
+            # Sort each group by delta magnitude descending
+            positive_sellers.sort(key=lambda s: s["yoy_delta"], reverse=True)
+            negative_sellers.sort(key=lambda s: s["yoy_delta"])  # most negative first
+
+            top_n = 20
+            top_sellers = positive_sellers[:top_n]
+            bottom_sellers = negative_sellers[:top_n]
+
             cat_entry["sellers"] = sellers_detail
+            cat_entry["top_sellers"] = top_sellers
+            cat_entry["bottom_sellers"] = bottom_sellers
+            cat_entry["total_seller_count"] = len(sellers_detail)
+            cat_entry["sellers_truncated"] = len(sellers_detail) > (top_n * 2)
 
         # --- Step 7: Channel-level aggregation ---
         def group_by_channel(row_list):

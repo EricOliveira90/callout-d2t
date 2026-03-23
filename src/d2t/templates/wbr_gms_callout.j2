@@ -1,10 +1,10 @@
 {# WBR GMS YoY callout — single-paragraph business review format #}
 {{ period_label }} GMS was {{ total_gms | compact_currency(signed=false) }}, {{ yoy_pct | signed_pct }} YoY ({{ yoy_delta | compact_currency }}).
 {%- if positive_categories %} Main YoY GMS positive contribution came from: {% for cat in positive_categories %}{{ "abcdefghijklmnopqrstuvwxyz"[loop.index0] }}) {{ cat.product_group }} ({{ cat.yoy_pct | signed_pct }}, {{ cat.yoy_delta | compact_currency }} YoY)
-{%- if cat.top_seller_name %}, driven by {{ cat.top_seller_name }} ({{ cat.top_seller_channel }}, {{ cat.top_seller_yoy_delta | compact_currency }} YoY){% endif %}
+{%- if cat.top_seller_name %}, driven by {{ cat.top_seller_name }} ({{ cat.top_seller_program }}, {{ cat.top_seller_yoy_delta | compact_currency }}){% endif %}
 {%- if not loop.last %}; {% endif %}
 {%- endfor %}.{% endif %}
 {%- if negative_categories %} On the negative side, {% for cat in negative_categories %}{{ "abcdefghijklmnopqrstuvwxyz"[positive_categories | length + loop.index0] }}) {{ cat.product_group }} ({{ cat.yoy_pct | signed_pct }}, {{ cat.yoy_delta | compact_currency }} YoY) was {% if loop.first %}the main offender{% else %}also an offender{% endif %}
-{%- if cat.top_seller_name %}, driven negatively by {{ cat.top_seller_name }} ({{ cat.top_seller_channel }}, {{ cat.top_seller_yoy_delta | compact_currency }} YoY){% endif %}
+{%- if cat.top_seller_name %}, driven negatively by {{ cat.top_seller_name }} ({{ cat.top_seller_program }}, {{ cat.top_seller_yoy_delta | compact_currency }}){% endif %}
 {%- if not loop.last %}; {% endif %}
 {%- endfor %}.{% endif %}

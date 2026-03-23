@@ -93,6 +93,8 @@ class ProductSelectionWow(AnalysisStrategy):
         lookup_desc_col="gl_category_description",
         top_drivers=2,
         top_detractors=1,
+        period_label="Period",
+        relations=None,
     ):
         self.period_col = period_col
         self.product_group_col = product_group_col
@@ -131,6 +133,8 @@ class ProductSelectionWow(AnalysisStrategy):
         self.lookup_desc_col = lookup_desc_col
         self.top_drivers = int(top_drivers)
         self.top_detractors = int(top_detractors)
+        self.period_label = period_label
+        self.relations = relations or []
 
     # ----- helpers -----
 
@@ -399,7 +403,10 @@ class ProductSelectionWow(AnalysisStrategy):
                 "all_channels": all_channels,
             }
 
-        return {"metrics": metrics_out}
+        return {
+            "period_label": self.period_label,
+            "metrics": metrics_out,
+        }
 
     def get_filters(self):
         return {

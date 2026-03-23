@@ -9,7 +9,7 @@ import click
 
 from d2t import __version__
 from d2t.errors import D2tError, format_error
-from d2t.input import parse_named_inputs
+from d2t.input import parse_named_inputs, parse_csv
 from d2t.strategy import load_strategy, list_strategies
 from d2t.engine import render
 from d2t.recipe import load_recipe, list_recipes
@@ -41,9 +41,7 @@ def run(ctx, recipe, strategy, template, inputs, params, strategy_dirs, template
 
     Examples:
 
-        d2t run --recipe monthly_revenue --input main=sales.csv
-
-        d2t run -s sum_by_group -t monthly_report -i main=sales.csv -p group_col=region
+        d2t run --recipe wbr_gms_callout --input main=sales.csv
     """
     verbose = ctx.obj["verbose"]
 
@@ -54,6 +52,9 @@ def run(ctx, recipe, strategy, template, inputs, params, strategy_dirs, template
             strategy_name = recipe_data["strategy"]
             template_name = recipe_data["template"]
             strategy_params = dict(recipe_data["params"])
+            # Pass relations to strategy when defined
+            if recipe_data.get("relations"):
+                strategy_params["relations"] = recipe_data["relations"]
         else:
             if not strategy or not template:
                 raise click.UsageError("--strategy and --template are required (or use --recipe).")
@@ -72,6 +73,14 @@ def run(ctx, recipe, strategy, template, inputs, params, strategy_dirs, template
 
         # Parse inputs
         parsed_inputs = parse_named_inputs(list(inputs))
+
+        # Auto-load default inputs from recipe when not provided by user
+        if recipe:
+            for inp_def in recipe_data.get("inputs", []):
+                name = inp_def["name"]
+                default = inp_def.get("default_path")
+                if default and name not in parsed_inputs:
+                    parsed_inputs[name] = parse_csv(Path(default))
 
         # Load strategy
         strat_dirs = [Path(d) for d in strategy_dirs]

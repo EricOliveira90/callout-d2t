@@ -1,33 +1,28 @@
 # src/d2t/config.yaml
 recipes:
-  monthly_revenue:
-    description: "Monthly revenue breakdown by group"
-    strategy: sum_by_group
-    template: monthly_report
-    inputs:
-      - name: main
-        description: "Data with a grouping column and a numeric value column"
-        required: true
-    params:
-      group_col: region
-      value_col: revenue
-
   wbr_gms_callout:
     description: "WBR GMS YoY callout by product group with top seller drivers"
     strategy: wbr_gms_yoy
     template: wbr_gms_callout
     inputs:
       - name: main
-        description: "Sales data with year, product_group, seller_name, channel, net_ordered_gms_usd columns"
+        description: "Sales data with year, product_group, seller_name, channel, program, net_ordered_gms_usd columns"
         required: true
       - name: lookup
         description: "Product group lookup table mapping numeric IDs to descriptions (e.g. PF-to-GL.csv)"
         required: false
+        default_path: csv-static/PF-to-GL.csv
+    relations:
+      - main_key: product_group
+        lookup_input: lookup
+        lookup_key: gl_product_group
+        group_by: gl_category_description
     params:
       year_col: year
       product_group_col: product_group
       seller_name_col: seller_name
       channel_col: channel
+      program_col: program
       gms_col: net_ordered_gms_usd
       period_label: Period
       lookup_group_col: gl_product_group
@@ -39,16 +34,23 @@ recipes:
     template: wbr_gms_detailed
     inputs:
       - name: main
-        description: "Sales data with year, product_group, seller_name, channel, net_ordered_gms_usd columns"
+        description: "Sales data with year, product_group, seller_name, channel, program, net_ordered_gms_usd columns"
         required: true
       - name: lookup
         description: "Product group lookup table mapping numeric IDs to descriptions (e.g. PF-to-GL.csv)"
         required: false
+        default_path: csv-static/PF-to-GL.csv
+    relations:
+      - main_key: product_group
+        lookup_input: lookup
+        lookup_key: gl_product_group
+        group_by: gl_category_description
     params:
       year_col: year
       product_group_col: product_group
       seller_name_col: seller_name
       channel_col: channel
+      program_col: program
       gms_col: net_ordered_gms_usd
       period_label: Period
       lookup_group_col: gl_product_group
@@ -65,6 +67,7 @@ recipes:
       - name: lookup
         description: "Product group lookup table (PF-to-GL.csv) mapping gl_product_group to gl_category_description"
         required: false
+        default_path: csv-static/PF-to-GL.csv
     params:
       period_col: period
       product_group_col: product_group
@@ -90,6 +93,7 @@ recipes:
       - name: lookup
         description: "Product group lookup table (PF-to-GL.csv) mapping gl_product_group to gl_category_description"
         required: false
+        default_path: csv-static/PF-to-GL.csv
     params:
       period_col: period
       product_group_col: product_group
