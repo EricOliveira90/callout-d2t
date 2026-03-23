@@ -132,6 +132,15 @@ def main():
                 unsafe_allow_html=True,
             )
 
+            # Offer download as Markdown file
+            md_filename = f"{selected_key}_output.md"
+            st.download_button(
+                label="📥 Download as Markdown",
+                data=output,
+                file_name=md_filename,
+                mime="text/markdown",
+            )
+
         except (InputNotFoundError, InputParseError) as e:
             st.error("Could not read file. Make sure it's a valid CSV or TSV.")
             with st.expander("Show details"):
