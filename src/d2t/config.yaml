@@ -1,7 +1,7 @@
 # src/d2t/config.yaml
 recipes:
   wbr_gms_callout:
-    description: "WBR GMS YoY callout by product group with top seller drivers"
+    description: "WBR GMS YoY callout by product group with top seller drivers and vs-goal comparison"
     strategy: wbr_gms_yoy
     template: wbr_gms_callout
     inputs:
@@ -12,11 +12,22 @@ recipes:
         description: "Product group lookup table mapping numeric IDs to descriptions (e.g. PF-to-GL.csv)"
         required: false
         default_path: csv-static/PF-to-GL.csv
+      - name: goals
+        description: "GMS goals data with activity_day, product_group, net_ordered_gms_usd columns"
+        required: false
+        default_path: csv-static/op2-2026-3p-goals-gms.csv
     relations:
       - main_key: product_group
         lookup_input: lookup
         lookup_key: gl_product_group
         group_by: gl_category_description
+    flags:
+      - name: start-date
+        description: "Start date of the analysis period (YYYY-MM-DD)"
+        required: true
+      - name: end-date
+        description: "End date of the analysis period (YYYY-MM-DD)"
+        required: true
     params:
       year_col: year
       product_group_col: product_group
@@ -27,9 +38,12 @@ recipes:
       period_label: Period
       lookup_group_col: gl_product_group
       lookup_desc_col: gl_category_description
+      goals_activity_day_col: activity_day
+      goals_product_group_col: product_group
+      goals_gms_col: net_ordered_gms_usd
 
   wbr_gms_detailed:
-    description: "WBR GMS YoY detailed breakdown — full product group × seller × channel analysis"
+    description: "WBR GMS YoY detailed breakdown — full product group × seller × channel analysis with vs-goal comparison"
     strategy: wbr_gms_yoy
     template: wbr_gms_detailed
     inputs:
@@ -40,11 +54,22 @@ recipes:
         description: "Product group lookup table mapping numeric IDs to descriptions (e.g. PF-to-GL.csv)"
         required: false
         default_path: csv-static/PF-to-GL.csv
+      - name: goals
+        description: "GMS goals data with activity_day, product_group, net_ordered_gms_usd columns"
+        required: false
+        default_path: csv-static/op2-2026-3p-goals-gms.csv
     relations:
       - main_key: product_group
         lookup_input: lookup
         lookup_key: gl_product_group
         group_by: gl_category_description
+    flags:
+      - name: start-date
+        description: "Start date of the analysis period (YYYY-MM-DD)"
+        required: true
+      - name: end-date
+        description: "End date of the analysis period (YYYY-MM-DD)"
+        required: true
     params:
       year_col: year
       product_group_col: product_group
@@ -55,6 +80,9 @@ recipes:
       period_label: Period
       lookup_group_col: gl_product_group
       lookup_desc_col: gl_category_description
+      goals_activity_day_col: activity_day
+      goals_product_group_col: product_group
+      goals_gms_col: net_ordered_gms_usd
 
   product_selection_callout:
     description: "Product Selection WoW executive callout — paragraph-style summary with top drivers/detractors and channel insights"

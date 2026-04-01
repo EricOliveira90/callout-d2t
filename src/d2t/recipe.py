@@ -57,6 +57,12 @@ def load_recipe(name: str, config_path: Path | None = None) -> dict:
             f"Recipe '{name}': 'relations' must be a list, got {type(relations).__name__}"
         )
 
+    flags = recipe.get("flags", [])
+    if not isinstance(flags, list):
+        raise RecipeConfigError(
+            f"Recipe '{name}': 'flags' must be a list, got {type(flags).__name__}"
+        )
+
     return {
         "description": recipe.get("description", ""),
         "strategy": recipe["strategy"],
@@ -64,14 +70,16 @@ def load_recipe(name: str, config_path: Path | None = None) -> dict:
         "inputs": recipe.get("inputs", []),
         "params": params,
         "relations": relations,
+        "flags": flags,
     }
 
 
 def list_recipes(config_path: Path | None = None) -> list[dict]:
-    """List all available recipes with metadata."""
+    """Return a list of all available recipes with summary info."""
     config = _load_config(config_path)
+    recipes = config["recipes"]
     results = []
-    for name, recipe in config["recipes"].items():
+    for name, recipe in recipes.items():
         results.append({
             "name": name,
             "description": recipe.get("description", ""),
