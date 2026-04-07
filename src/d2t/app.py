@@ -122,16 +122,6 @@ def main():
                     param_overrides=param_overrides,
                 )
 
-            # Display raw output in a styled text area
-            st.markdown(
-                '<div style="font-family: Arial, sans-serif; background: #f8f9fa; '
-                'border: 1px solid #ddd; border-radius: 4px; padding: 1em; '
-                'white-space: pre-wrap; line-height: 1.6;">'
-                + output.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-                + "</div>",
-                unsafe_allow_html=True,
-            )
-
             # Offer download as Markdown file
             md_filename = f"{selected_key}_output.md"
             st.download_button(
@@ -139,6 +129,17 @@ def main():
                 data=output,
                 file_name=md_filename,
                 mime="text/markdown",
+            )
+
+            # Display raw output in a styled text area with scroll
+            st.markdown(
+                '<div style="font-family: Arial, sans-serif; background: #f8f9fa; '
+                'border: 1px solid #ddd; border-radius: 4px; padding: 1em; '
+                'white-space: pre-wrap; line-height: 1.6; '
+                'max-height: 400px; overflow-y: auto;">'
+                + output.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                + "</div>",
+                unsafe_allow_html=True,
             )
 
         except (InputNotFoundError, InputParseError) as e:

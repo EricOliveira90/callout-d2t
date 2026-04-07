@@ -35,8 +35,10 @@ def cli(ctx, verbose):
 @click.option("--template-dir", "template_dirs", multiple=True, help="Additional template search directory.")
 @click.option("--output", "-o", "output_path", default=None, type=click.Path(), help="Write output to file (e.g. report.md).")
 @click.option("--dry-run", is_flag=True, default=False, help="Validate without rendering.")
+@click.option("--start-date", default=None, help="Start date of the analysis period (YYYY-MM-DD).")
+@click.option("--end-date", default=None, help="End date of the analysis period (YYYY-MM-DD).")
 @click.pass_context
-def run(ctx, recipe, strategy, template, inputs, params, strategy_dirs, template_dirs, output_path, dry_run):
+def run(ctx, recipe, strategy, template, inputs, params, strategy_dirs, template_dirs, output_path, dry_run, start_date, end_date):
     """Execute a data-to-text pipeline.
 
     Examples:
@@ -70,6 +72,22 @@ def run(ctx, recipe, strategy, template, inputs, params, strategy_dirs, template
                     f"Invalid --param format: '{p}'. Expected key=value."
                 )
             strategy_params[key] = value
+
+        # Pass --start-date / --end-date as strategy params
+        if start_date:
+            strategy_params["start_date"] = start_date
+        if end_date:
+            strategy_params["end_date"] = end_date
+
+        # Validate required flags from recipe
+        if recipe:
+            for flag_def in recipe_data.get("flags", []):
+                flag_name = flag_def["name"]
+                param_key = flag_name.replace("-", "_")
+                if flag_def.get("required") and param_key not in strategy_params:
+                    raise click.UsageError(
+                        f"Recipe '{recipe}' requires --{flag_name}."
+                    )
 
         # Parse inputs
         parsed_inputs = parse_named_inputs(list(inputs))
