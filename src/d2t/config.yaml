@@ -42,6 +42,49 @@ recipes:
       goals_product_group_col: product_group
       goals_gms_col: net_ordered_gms_usd
 
+  wbr_gms_pf_callout:
+    description: "WBR GMS YoY callout by product family — one paragraph per product_family with product group drivers and vs-goal comparison"
+    strategy: wbr_gms_pf_yoy
+    template: wbr_gms_pf_callout
+    inputs:
+      - name: main
+        description: "Sales data with year, product_family, product_group, seller_name, channel, program, net_ordered_gms_usd columns"
+        required: true
+      - name: lookup
+        description: "Product group lookup table mapping numeric IDs to descriptions (e.g. PF-to-GL.csv)"
+        required: false
+        default_path: csv-static/PF-to-GL.csv
+      - name: goals
+        description: "GMS goals data with activity_day, product_group, net_ordered_gms_usd columns"
+        required: false
+        default_path: csv-static/op2-2026-3p-goals-gms.csv
+    relations:
+      - main_key: product_group
+        lookup_input: lookup
+        lookup_key: gl_product_group
+        group_by: gl_category_description
+    flags:
+      - name: start-date
+        description: "Start date of the analysis period (YYYY-MM-DD)"
+        required: true
+      - name: end-date
+        description: "End date of the analysis period (YYYY-MM-DD)"
+        required: true
+    params:
+      product_family_col: product_family
+      year_col: year
+      product_group_col: product_group
+      seller_name_col: seller_name
+      channel_col: channel
+      program_col: program
+      gms_col: net_ordered_gms_usd
+      period_label: Period
+      lookup_group_col: gl_product_group
+      lookup_desc_col: gl_category_description
+      goals_activity_day_col: activity_day
+      goals_product_group_col: product_group
+      goals_gms_col: net_ordered_gms_usd
+
   wbr_gms_detailed:
     description: "WBR GMS YoY detailed breakdown — full product group × seller × channel analysis with vs-goal comparison"
     strategy: wbr_gms_yoy
@@ -85,30 +128,153 @@ recipes:
       goals_gms_col: net_ordered_gms_usd
 
   product_selection_callout:
-    description: "Product Selection WoW executive callout — paragraph-style summary with top drivers/detractors and channel insights"
-    strategy: product_selection_wow
+    description: "Product Selection WoW + YoY callout v2 by GL with seller drivers, conversion analysis, churn, channel mix, FTAC/AWAS ratio, and vs-goal tracking"
+    strategy: product_selection_wow_yoy
     template: product_selection_callout
     inputs:
       - name: main
-        description: "Product selection data with period, product_group, channel flags (is_fba, is_fbaos, is_es, is_ss), filter flags (is_dom, is_narf, mfn_ooc), and metrics (ba, awagv, awas, ftac)"
+        description: "Unified ASIN-level CSV (SQL Output 1): one row per period (CWCY/LWCY/LW1CY/LW2CY/CWLY) x pf x gl x metric (ba/awas/ftac) with channel columns (dom, fba, sf, es, ss, ooc, mfn_ooc, narf)"
         required: true
+      - name: sellers
+        description: "BA seller-level CSV (SQL Output 2): same shape as main plus mcid and seller_name, pre-filtered to top sellers per (metric, gl). Periods: CWCY, LWCY, CWLY."
+        required: true
+      - name: churn
+        description: "BA seller churn CSV (SQL Output 3): one row per pf x gl x seller with new_asins, retained_asins, churned_asins, net_change. Compares CWCY vs LWCY at ASIN x seller grain (DOM scope)."
+        required: false
+      - name: goals
+        description: "Selection goals CSV: one row per Metric x Ref_week x date_value x PF x GL with channel target columns (3P DOM, FBA, SF, ES, MFN SS)"
+        required: false
+        default_path: csv-static/selection-goals-2026.csv
       - name: lookup
         description: "Product group lookup table (PF-to-GL.csv) mapping gl_product_group to gl_category_description"
         required: false
         default_path: csv-static/PF-to-GL.csv
+    relations:
+      - main_key: gl
+        lookup_input: lookup
+        lookup_key: gl_product_group
+        group_by: gl_category_description
+    flags:
+      - name: week
+        description: "Week number (Sun-Sat). Derives start-date, end-date, and goal_ref_week automatically."
+        required: false
+      - name: year
+        description: "Year for --week (defaults to current year)"
+        required: false
     params:
       period_col: period
-      product_group_col: product_group
-      is_dom_col: is_dom
-      is_narf_col: is_narf
-      mfn_ooc_col: mfn_ooc
-      metrics: "ba,awagv,awas,ftac"
-      channel_cols: "is_fba,is_fbaos,is_es,is_ss"
-      channel_labels: "FBA,Seller Flex,MFN Easy Ship,MFN Self Ship"
+      pf_col: pf
+      gl_col: gl
+      metric_col: metric
+      dom_col: dom
+      mcid_col: mcid
+      seller_name_col: seller_name
+      metrics: "ba,awas,ftac"
+      period_label: Period
       lookup_group_col: gl_product_group
       lookup_desc_col: gl_category_description
-      top_drivers: 2
-      top_detractors: 1
+      # Configurable thresholds (PRD v2)
+      opposite_seller_threshold: 0.8
+      conversion_single_week_pct: 10.0
+      conversion_consecutive_weeks: 3
+      churn_ratio_threshold: 0.5
+      channel_pf_abs_floor: 0.4
+      channel_pf_growth_mult: 1.3
+      channel_pf_counter_trend_pct: 1.5
+      channel_gl_abs_floor: 0.4
+      channel_gl_growth_mult: 1.5
+      ftac_awas_consecutive_weeks: 3
+      ftac_awas_cumulative_pct: 15.0
+      goal_off_track_floor_pct: 3.0
+      goal_off_track_relative_mult: 2.0
+      # Goals CSV column names
+      goals_metric_col: Metric
+      goals_pf_col: PF
+      goals_gl_col: GL
+      goals_ref_week_col: Ref_week
+      goals_date_value_col: date_value
+      # Churn CSV column names
+      churn_pf_col: pf
+      churn_gl_col: gl
+      churn_mcid_col: mcid
+      churn_seller_name_col: seller_name
+      churn_new_col: new_asins
+      churn_retained_col: retained_asins
+      churn_churned_col: churned_asins
+      churn_net_col: net_change
+
+  product_selection_pf_callout:
+    description: "Product Selection WoW + YoY callout by product family — one section per PF, each with per-GL drivers, seller attribution, and v2 analytics"
+    strategy: product_selection_pf_wow_yoy
+    template: product_selection_pf_callout
+    inputs:
+      - name: main
+        description: "Unified ASIN-level CSV (SQL Output 1): one row per period x pf x gl x metric with channel columns. Periods: CWCY/LWCY/LW1CY/LW2CY/CWLY."
+        required: true
+      - name: sellers
+        description: "BA seller-level CSV (SQL Output 2): one row per period x pf x gl x seller with dom column. metric column optional (defaults to 'ba'). Periods: CWCY, LWCY, CWLY."
+        required: true
+      - name: churn
+        description: "BA seller churn CSV (SQL Output 3): one row per pf x gl x seller with new_asins, retained_asins, churned_asins, net_change."
+        required: false
+      - name: goals
+        description: "Selection goals CSV: one row per Metric x Ref_week x date_value x PF x GL with channel target columns"
+        required: false
+        default_path: csv-static/selection-goals-2026.csv
+      - name: lookup
+        description: "Product group lookup table (PF-to-GL.csv) mapping gl_product_group to gl_category_description"
+        required: false
+        default_path: csv-static/PF-to-GL.csv
+    relations:
+      - main_key: gl
+        lookup_input: lookup
+        lookup_key: gl_product_group
+        group_by: gl_category_description
+    flags:
+      - name: week
+        description: "Week number (Sun-Sat). Derives start-date, end-date, and goal_ref_week automatically."
+        required: false
+      - name: year
+        description: "Year for --week (defaults to current year)"
+        required: false
+    params:
+      pf_col: pf
+      period_col: period
+      gl_col: gl
+      metric_col: metric
+      dom_col: dom
+      mcid_col: mcid
+      seller_name_col: seller_name
+      metrics: "ba,awas,ftac"
+      period_label: Period
+      lookup_group_col: gl_product_group
+      lookup_desc_col: gl_category_description
+      opposite_seller_threshold: 0.8
+      conversion_single_week_pct: 10.0
+      conversion_consecutive_weeks: 3
+      churn_ratio_threshold: 0.5
+      channel_pf_abs_floor: 0.4
+      channel_pf_growth_mult: 1.3
+      channel_pf_counter_trend_pct: 1.5
+      channel_gl_abs_floor: 0.4
+      channel_gl_growth_mult: 1.5
+      ftac_awas_consecutive_weeks: 3
+      ftac_awas_cumulative_pct: 15.0
+      goal_off_track_floor_pct: 3.0
+      goal_off_track_relative_mult: 2.0
+      goals_metric_col: Metric
+      goals_pf_col: PF
+      goals_gl_col: GL
+      goals_ref_week_col: Ref_week
+      goals_date_value_col: date_value
+      churn_pf_col: pf
+      churn_gl_col: gl
+      churn_mcid_col: mcid
+      churn_seller_name_col: seller_name
+      churn_new_col: new_asins
+      churn_retained_col: retained_asins
+      churn_churned_col: churned_asins
+      churn_net_col: net_change
 
   product_selection_detailed:
     description: "Product Selection WoW detailed breakdown — full channel × product group matrix for all metrics"
@@ -135,3 +301,20 @@ recipes:
       lookup_desc_col: gl_category_description
       top_drivers: 2
       top_detractors: 1
+
+  esm_fulfillment_callout:
+    description: "ESM Fulfillment weekly GMS callout with WoW% and YTD"
+    strategy: esm_fulfillment_callout
+    template: esm_fulfillment_callout
+    inputs:
+      - name: main
+        description: "ESM GMS CSV (semicolon-delimited) with gms_usd, date_view, date_value, program, team, alias columns"
+        required: true
+    params:
+      gms_col: gms_usd
+      date_view_col: date_view
+      date_value_col: date_value
+      program_col: program
+      team_col: team
+      alias_col: alias
+      team: Fulfillment

@@ -1,0 +1,59 @@
+{# Product Selection WoW + YoY callout by product family — one section per PF. #}
+{#
+   Context:
+     period_label
+     families[] — each containing:
+       product_family
+       metrics.<key> each containing:
+         label, cw_total, lw_total, ly_total,
+         wow_delta, wow_pct, yoy_delta, yoy_pct,
+         positive_categories[], negative_categories[],
+         pf_annotations
+#}
+{# ---- Seller format macro ---- #}
+{% macro seller_fmt(seller) -%}
+{{ seller.seller_name }} ({{ seller.wow_delta | signed_k }}
+{%- if seller.get("churn") %}; +{{ seller.churn.new_asins }} new, -{{ seller.churn.churned_asins }} churned{% endif %})
+{%- endmacro %}
+{# ---- PF-level annotation block ---- #}
+{% macro pf_annotation_block(ann) -%}
+{% if ann.get("vs_goal") %} {{ ann.vs_goal.vs_goal_inline }}.{% endif %}
+{% if ann.get("conversion") %} BA-to-AWAS conversion: {{ "%.1f" | format(ann.conversion.cw_ratio * 100) }}% ({{ ann.conversion.wow_pp | signed_pp }} WoW). {{ ann.conversion.diagnosis }}.{% endif %}
+{% if ann.get("ftac_awas_ratio") %} FTAC/AWAS ratio {{ ann.ftac_awas_ratio.direction }} for {{ ann.ftac_awas_ratio.weeks }} consecutive week{{ "s" if ann.ftac_awas_ratio.weeks > 1 }} ({{ "%.1f" | format(ann.ftac_awas_ratio.start_pct) }}% → {{ "%.1f" | format(ann.ftac_awas_ratio.end_pct) }}%, {{ ann.ftac_awas_ratio.cumulative_pp | signed_pp }} cumulative).{% endif %}
+{% if ann.get("channel_mix") %}{% if ann.channel_mix.signal_a %}{% for s in ann.channel_mix.signal_a %} {{ s.channel }} grew {{ "%.1f" | format(s.ratio) }}x faster than DOM ({{ "%.0f" | format(s.change_share) }}% of WoW change).{% endfor %}{% endif %}{% if ann.channel_mix.signal_b %}{% for s in ann.channel_mix.signal_b %} {{ s.channel }} moved counter to DOM ({{ s.delta | signed_k }}, {{ "%.1f" | format(s.pct_of_own_lw) }}% of own LW base).{% endfor %}{% endif %}{% endif %}
+{%- endmacro %}
+{# ---- GL-level annotation inline ---- #}
+{% macro gl_annotation_inline(ann) -%}
+{% if ann.get("conversion") %} — BA-to-AWAS conversion at {{ "%.1f" | format(ann.conversion.cw_ratio * 100) }}% ({{ ann.conversion.wow_pp | signed_pp }} WoW){% endif %}
+{%- if ann.get("ftac_awas_ratio") %} [FTAC/AWAS {{ ann.ftac_awas_ratio.direction }} {{ ann.ftac_awas_ratio.weeks }}wk]{% endif %}
+{%- if ann.get("channel_mix") and ann.channel_mix.signal_a %}{% for s in ann.channel_mix.signal_a %} [{{ s.channel }} at {{ s.growth_rate | signed_pct }}]{% endfor %}{% endif %}
+{%- if ann.get("vs_goal") and ann.vs_goal.dom_pct_vs_goal <= -10.0 %} ({{ ann.vs_goal.vs_goal_inline }}){% endif %}
+{%- endmacro %}
+{# ---- Metric paragraph ---- #}
+{% macro metric_paragraph(m, label_prefix) -%}
+{{ label_prefix }}{{ m.label }} was {{ m.cw_total | compact_k }} ASINs, {{ m.wow_pct | signed_pct }} WoW ({{ m.wow_delta | signed_k }}) and {{ m.yoy_pct | signed_pct }} YoY ({{ m.yoy_delta | signed_k }}).
+{%- for pf, ann in m.pf_annotations.items() %}{{ pf_annotation_block(ann) }}{% endfor %}
+{%- if m.positive_categories %} Main WoW positive contribution came from: {% for cat in m.positive_categories %}{{ "abcdefghijklmnopqrstuvwxyz"[loop.index0] }}) {{ cat.name }} ({{ cat.wow_pct | signed_pct }}, {{ cat.wow_delta | signed_k }} WoW; {{ cat.yoy_pct | signed_pct }} YoY){{ gl_annotation_inline(cat.annotations) }}
+{%- if cat.top_seller %}, driven by {{ seller_fmt(cat.top_seller) }}{% endif %}
+{%- if cat.opposite_seller %}, partially offset by {{ seller_fmt(cat.opposite_seller) }}{% endif %}
+{%- if not loop.last %}; {% endif %}
+{%- endfor %}.{% endif %}
+{%- if m.negative_categories %} On the negative side, {% for cat in m.negative_categories %}{{ "abcdefghijklmnopqrstuvwxyz"[m.positive_categories | length + loop.index0] }}) {{ cat.name }} ({{ cat.wow_pct | signed_pct }}, {{ cat.wow_delta | signed_k }} WoW; {{ cat.yoy_pct | signed_pct }} YoY) was {% if loop.first %}the main offender{% else %}also an offender{% endif %}{{ gl_annotation_inline(cat.annotations) }}
+{%- if cat.top_seller %}, driven negatively by {{ seller_fmt(cat.top_seller) }}{% endif %}
+{%- if cat.opposite_seller %}, partially offset by {{ seller_fmt(cat.opposite_seller) }}{% endif %}
+{%- if not loop.last %}; {% endif %}
+{%- endfor %}.{% endif %}
+{%- endmacro %}
+{# ---- Render each product family ---- #}
+{% for fam in families %}
+{%- if not loop.first %}
+
+
+{% endif -%}
+# {{ fam.product_family }}
+
+{% for key, m in fam.metrics.items() %}
+{{ metric_paragraph(m, fam.period_label ~ " ") }}
+
+{% endfor %}
+{%- endfor %}
